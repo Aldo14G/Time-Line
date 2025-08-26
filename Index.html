@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolución de las Redes Sociales | Timeline Interactivo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                        'playfair': ['Playfair Display', 'serif']
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.8s ease-out',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'float': 'float 3s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'scale-in': 'scaleIn 0.5s ease-out'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(50px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 20px rgba(139, 69, 255, 0.3)' },
+                            '100%': { boxShadow: '0 0 40px rgba(139, 69, 255, 0.6)' }
+                        },
+                        scaleIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.8)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #ffffff 0%, #f7f8fc 100%);
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --backdrop-blur: blur(15px);
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --accent-color: #4f46e5;
+        }
+
+        * {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            background-image: 
+                radial-gradient(circle at 25% 25%, #f1f3f4 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, #e9ecef 0%, transparent 50%);
+            min-height: 100vh;
+            position: relative;
+            color: #212529;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(241, 245, 249, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(248, 250, 252, 0.4) 0%, transparent 50%);
+            z-index: -1;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            -webkit-backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.08);
+        }
+
+        .timeline-item {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .timeline-item:hover::before {
+            transform: translateX(100%);
+        }
+
+        .timeline-item.active {
+            transform: scale(1.2) translateY(-8px);
+            box-shadow: 0 0 30px rgba(79, 70, 229, 0.4);
+        }
+
+        .timeline-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 6px;
+            background: linear-gradient(90deg, 
+                rgba(156, 163, 175, 0.3) 0%, 
+                rgba(107, 114, 128, 0.7) 50%, 
+                rgba(156, 163, 175, 0.3) 100%);
+            border-radius: 3px;
+            z-index: 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            height: 50vh;
+            max-height: 500px;
+        }
+
+        .content-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(247, 248, 252, 0.8) 100%);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            transition: all 0.4s ease;
+        }
+
+        .content-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .platform-icon {
+            font-size: 2.5rem;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+            transition: all 0.3s ease;
+        }
+
+        .platform-icon:hover {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s ease;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .nav-link {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #4f46e5, #6366f1);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .timeline-item.active {
+                transform: scale(1.1) translateY(-4px);
+            }
+            
+            body::before {
+                opacity: 0.7;
+            }
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(156, 163, 175, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #4f46e5;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #374151 0%, #6b7280 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .platform-card {
+            backdrop-filter: blur(15px);
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .platform-card:hover {
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="antialiased text-gray-900">
+    <header class="glass-card fixed top-0 w-full z-50 border-b border-gray-200/50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-playfair font-bold text-gray-800">
+                GIRD
+            </h1>
+            <ul class="flex space-x-8 text-gray-600">
+                <li><a href="#timeline" class="nav-link hover:text-indigo-600 transition-colors duration-300 font-medium">Timeline</a></li>
+                <li><a href="#analysis" class="nav-link hover:text-indigo-600 transition-colors duration-300 font-medium">Análisis</a></li>
+                <li><a href="#future" class="nav-link hover:text-indigo-600 transition-colors duration-300 font-medium">Futuro</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="pt-20">
+        <section class="text-center py-20 px-6 reveal">
+            <h2 class="text-5xl md:text-7xl font-playfair font-bold mb-6 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 bg-clip-text text-transparent leading-tight">
+                La Revolución Social Digital
+            </h2>
+            <p class="max-w-4xl mx-auto text-xl md:text-2xl text-gray-600 leading-relaxed font-light">
+                Un viaje interactivo a través de las plataformas que transformaron la manera en que nos conectamos, 
+                compartimos y experimentamos el mundo digital.
+            </p>
+            <div class="mt-8">
+                <div class="inline-block p-1 rounded-full bg-gradient-to-r from-indigo-100 to-indigo-200">
+                    <div class="px-6 py-3 rounded-full bg-white/90 backdrop-blur-sm text-gray-700 font-medium">
+                        Explora la cronología ↓
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="timeline" class="py-20 px-6">
+            <div class="container mx-auto">
+                <h3 class="text-4xl md:text-5xl font-playfair font-bold text-center mb-4 reveal text-gray-800">
+                    Cronología
+                </h3>
+                <p class="text-center text-gray-600 text-lg mb-16 max-w-3xl mx-auto reveal">
+                    Cada punto representa un momento crucial en la evolución digital. Haz clic para descubrir la historia completa. 
+                </p>
+                
+                <div class="relative w-full px-4 py-12 reveal">
+                    <div class="timeline-line"></div>
+                    <div id="timeline-container" class="flex justify-between items-center flex-wrap gap-4 md:gap-0">
+                        <!-- Timeline items se generan dinámicamente -->
+                    </div>
+                </div>
+                
+                <div id="content-display" class="mt-16 reveal">
+                    <div class="glass-card rounded-3xl p-8 md:p-12 min-h-[500px] transition-all duration-500">
+                        <div class="flex justify-center items-center h-32">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="comparison" class="py-20 px-6">
+            <div class="container mx-auto">
+                <h3 class="text-4xl md:text-5xl font-playfair font-bold text-center mb-4 reveal text-gray-800">
+                    Impacto Global
+                </h3>
+                <p class="text-center text-gray-600 text-lg mb-12 max-w-3xl mx-auto reveal">
+                    Una visualización del alcance masivo que tuvieron estas plataformas en su momento de mayor influencia.
+                </p>
+                
+                <div class="glass-card rounded-3xl p-6 md:p-12 reveal">
+                    <div class="chart-container">
+                        <canvas id="userChart" role="img" aria-label="Gráfico comparativo de usuarios de redes sociales"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="analysis" class="py-20 px-6">
+            <div class="container mx-auto">
+                <h3 class="text-4xl md:text-5xl font-playfair font-bold text-center mb-4 reveal text-gray-800">
+                    Análisis Profundo
+                </h3>
+                <p class="text-center text-gray-600 text-lg mb-16 max-w-4xl mx-auto reveal">
+                    Más allá de las cifras, exploramos los cambios culturales y psicológicos que definieron cada era digital.
+                </p>
+                
+                <div id="analysis-cards-container" class="grid md:grid-cols-2 xl:grid-cols-4 gap-6 md:gap-8">
+                    <!-- Analysis cards se generan dinámicamente -->
+                </div>
+            </div>
+        </section>
+
+        <section id="future" class="py-20 px-6">
+            <div class="container mx-auto">
+                <div class="glass-card rounded-3xl p-8 md:p-16 text-center reveal">
+                    <h3 class="text-4xl md:text-5xl font-playfair font-bold mb-6 text-gray-800">
+                        El Próximo Capítulo
+                    </h3>
+                    <p class="text-gray-600 text-xl mb-12 max-w-4xl mx-auto leading-relaxed">
+                        La evolución continúa. Nuevas tecnologías prometen redefinir una vez más nuestra experiencia social digital.
+                    </p>
+                    
+                    <div class="grid md:grid-cols-3 gap-8 mt-12">
+                        <div class="platform-card rounded-2xl p-8 text-center group">
+                            <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🌐</div>
+                            <h4 class="text-2xl font-bold mb-4 font-playfair text-gray-800">Web Descentralizada</h4>
+                            <p class="text-gray-600 leading-relaxed">
+                                Plataformas como Mastodon y Bluesky devuelven el control a los usuarios, 
+                                priorizando la privacidad y la soberanía de los datos.
+                            </p>
+                        </div>
+                        
+                        <div class="platform-card rounded-2xl p-8 text-center group">
+                            <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🛒</div>
+                            <h4 class="text-2xl font-bold mb-4 font-playfair text-gray-800">Social Commerce</h4>
+                            <p class="text-gray-600 leading-relaxed">
+                                La integración perfecta entre descubrimiento y compra transforma 
+                                las redes sociales en ecosistemas comerciales completos.
+                            </p>
+                        </div>
+                        
+                        <div class="platform-card rounded-2xl p-8 text-center group">
+                            <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">🤖</div>
+                            <h4 class="text-2xl font-bold mb-4 font-playfair text-gray-800">IA Generativa</h4>
+                            <p class="text-gray-600 leading-relaxed">
+                                La inteligencia artificial potencia la creatividad pero desafía 
+                                nuestra capacidad de distinguir lo real de lo artificial.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="glass-card border-t border-gray-200/80 mt-20">
+        <div class="container mx-auto px-6 py-8 text-center text-gray-500">
+            <p class="font-medium">
+                © 2025 Elaborado por: Aldo Giovanni Martinez Pineda • Colegio GIRD
+            </p>
+        </div>
+    </footer>
+
+    <!-- Modal para análisis temático -->
+    <div id="analysis-modal" class="modal flex items-center justify-center p-4" role="dialog" aria-labelledby="modal-title" aria-hidden="true">
+        <div class="modal-content glass-card rounded-2xl m-4 p-8 max-w-4xl w-full relative max-h-[80vh] overflow-y-auto">
+            <button id="close-modal-btn" class="absolute top-6 right-6 text-gray-400 hover:text-gray-800 transition-colors p-2 rounded-full hover:bg-gray-100" aria-label="Cerrar modal">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+            <h4 id="modal-title" class="text-3xl font-playfair font-bold mb-6 text-gray-800 pr-12"></h4>
+            <div id="modal-body" class="text-gray-600 prose max-w-none leading-relaxed text-lg"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de datos
+        const platforms = [
+            {
+                id: 'sixdegrees',
+                name: 'SixDegrees',
+                year: 1997,
+                users: 3.5,
+                icon: '🌐',
+                color: 'bg-gray-500',
+                summary: 'La primera red social verdadera que introdujo perfiles de usuario y listas de amigos. Su fracaso fue temporal: llegó demasiado pronto a un mundo que aún no estaba preparado para la revolución social digital.',
+                innovation: 'Perfiles digitales y conexiones entre usuarios',
+                impact: 'Estableció el ADN de todas las redes sociales futuras, demostrando que la humanidad anhelaba conectarse digitalmente.'
+            },
+            {
+                id: 'myspace',
+                name: 'MySpace',
+                year: 2003,
+                users: 115,
+                icon: '🎨',
+                color: 'bg-sky-500',
+                summary: 'El primer gigante social que transformó la web en un lienzo personal. MySpace no solo conectaba personas, sino que les daba el poder de expresar su identidad digital de manera completamente única.',
+                innovation: 'Personalización total de perfiles y plataforma musical',
+                impact: 'Creó la primera cultura juvenil digital masiva y lanzó las carreras de innumerables artistas. Su legado vive en cada perfil personalizable.'
+            },
+            {
+                id: 'facebook',
+                name: 'Facebook',
+                year: 2004,
+                users: 3000,
+                icon: '👥',
+                color: 'bg-blue-600',
+                summary: 'La revolución que lo cambió todo. Facebook no solo conectó al mundo, sino que redefinió completamente cómo consumimos información, mantenemos relaciones y vivimos nuestras vidas digitales.',
+                innovation: 'El News Feed algorítmico y el grafo social global',
+                impact: 'Transformó internet de un espacio de información a un espacio de relaciones. Cambió la política, el comercio y la cultura para siempre.'
+            },
+            {
+                id: 'twitter',
+                name: 'Twitter/X',
+                year: 2006,
+                users: 611,
+                icon: '✖️',
+                color: 'bg-black',
+                summary: 'La plaza pública digital que comprimió el pensamiento humano en 140 caracteres. Twitter se convirtió en el pulso del mundo, donde nacen tendencias, caen gobiernos y se escribe la historia en tiempo real.',
+                innovation: 'Microblogging y comunicación en tiempo real',
+                impact: 'Redefinió el periodismo, la política y la velocidad de la información. Se convirtió en la voz colectiva de la humanidad.'
+            },
+            {
+                id: 'instagram',
+                name: 'Instagram',
+                year: 2010,
+                users: 2000,
+                icon: '📸',
+                color: 'bg-pink-500',
+                summary: 'La plataforma que democratizó la fotografía profesional y creó la era de los influencers. Instagram transformó momentos cotidianos en obras de arte y redefinió conceptos de belleza y éxito.',
+                innovation: 'Fotografía mobile-first y contenido visual efímero',
+                impact: 'Creó la economía creator, transformó el marketing y cambió fundamentalmente cómo vemos y compartimos nuestras vidas.'
+            },
+            {
+                id: 'vine',
+                name: 'Vine',
+                year: 2013,
+                users: 200,
+                icon: '🔄',
+                color: 'bg-green-500',
+                summary: 'Seis segundos que cambiaron el entretenimiento para siempre. Vine demostró que las limitaciones creativas pueden generar una explosión de innovación, creando un nuevo lenguaje visual que perdura.',
+                innovation: 'Vídeo corto en bucle con restricciones creativas',
+                impact: 'Padre espiritual de TikTok, creó memes atemporales y una generación de comediantes digitales que siguen influyendo en la cultura.'
+            },
+            {
+                id: 'tiktok',
+                name: 'TikTok',
+                year: 2016,
+                users: 1500,
+                icon: '🎵',
+                color: 'bg-red-500',
+                summary: 'La revolución algorítmica que rompió todas las reglas. TikTok eliminó la necesidad de seguidores para ser viral y creó un nuevo paradigma: el entretenimiento infinito e hiperpersonalizado.',
+                innovation: 'Algoritmo de descubrimiento y entretenimiento vertical',
+                impact: 'Redefinió la cultura juvenil global, forzó a toda la industria a adoptar el vídeo corto y creó nuevas formas de expresión artística y comercial.'
+            }
+        ];
+
+        const analysisTopics = [
+            {
+                id: 'identity',
+                title: 'Identidad Digital',
+                summary: 'La evolución de cómo nos presentamos online: del caos creativo de MySpace a la perfección curada de Instagram.',
+                content: `
+                    <p class="mb-4">La representación del yo digital ha experimentado una transformación fascinante. En MySpace, éramos arquitectos salvajes de nuestra identidad, usando HTML para crear espacios únicos y auténticos, por caóticos que fueran.</p>
+                    
+                    <p class="mb-4">Facebook estandarizó esta expresión, creando un marco más limpio pero restrictivo. Instagram llevó esto al extremo, convirtiendo nuestras vidas en galerías cuidadosamente curadas donde cada imagen debe contar una historia de éxito y belleza.</p>
+                    
+                    <p>Esta evolución refleja una tensión constante entre autenticidad y performance, entre quiénes somos realmente y quiénes queremos que otros crean que somos.</p>
+                `
+            },
+            {
+                id: 'virality',
+                title: 'Mecánicas Virales',
+                summary: 'De la viralidad orgánica impulsada por comunidades hasta los algoritmos que predicen y generan tendencias masivas.',
+                content: `
+                    <p class="mb-4">La viralidad ha evolucionado desde fenómenos orgánicos hasta ciencia algorítmica. Los Arctic Monkeys se hicieron famosos en MySpace de manera completamente grassroots, construyendo una base de fans real y auténtica.</p>
+                    
+                    <p class="mb-4">Facebook y Twitter democratizaron la viralidad, permitiendo que cualquier contenido pudiera explotar si tocaba las emociones correctas. Pero TikTok cambió las reglas: ya no necesitas seguidores para ser viral.</p>
+                    
+                    <p>Su algoritmo puede hacer que tu primer vídeo sea visto por millones, creando estrellas instantáneas pero también adicción al contenido hiperpersonalizado.</p>
+                `
+            },
+            {
+                id: 'context',
+                title: 'Colapso Contextual',
+                summary: 'Cuando audiencias múltiples colisionan en un mismo espacio digital, las consecuencias pueden ser devastadoras.',
+                content: `
+                    <p class="mb-4">El "colapso del contexto" es uno de los fenómenos más peligrosos de las redes sociales. Justine Sacco aprendió esto de la manera más brutal: un tweet sarcástico dirigido a sus seguidores se convirtió en escándalo global mientras ella volaba sin conexión.</p>
+                    
+                    <p class="mb-4">En la vida real, ajustamos nuestro comportamiento según el contexto: hablamos diferente con amigos que con colegas. Pero las redes sociales colapsan todos estos contextos en uno solo.</p>
+                    
+                    <p>El resultado es una sociedad donde un solo momento de mal juicio puede destruir vidas, donde la intención se pierde y donde el matiz desaparece en favor de la indignación viral.</p>
+                `
+            },
+            {
+                id: 'algorithm',
+                title: 'Era Algorítmica',
+                summary: 'El cambio de feeds cronológicos a feeds algorítmicos cambió fundamentalmente nuestra relación con la información.',
+                content: `
+                    <p class="mb-4">Los primeros días de las redes sociales eran cronológicos: veías las últimas publicaciones de tus amigos en orden temporal. Simple, transparente, humano.</p>
+                    
+                    <p class="mb-4">Facebook introdujo el feed algorítmico para maximizar el engagement, pero creó efectos secundarios masivos: burbujas de filtro, cámaras de eco, adicción al scroll infinito.</p>
+                    
+                    <p>Ahora vivimos en mundos informacionales completamente personalizados, donde dos personas pueden tener experiencias de realidad completamente diferentes, alimentadas por algoritmos diseñados para capturar atención, no para informar o conectar.</p>
+                `
+            }
+        ];
+
+        // Funciones de utilidad
+        const utils = {
+            // Intersection Observer para animaciones de scroll
+            observeElements() {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('active');
+                        }
+                    });
+                }, { threshold: 0.1 });
+
+                document.querySelectorAll('.reveal').forEach(el => {
+                    observer.observe(el);
+                });
+            },
+
+            // Smooth scroll para navegación
+            setupSmoothScroll() {
+                document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                    anchor.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        const target = document.querySelector(this.getAttribute('href'));
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                });
+            },
+
+            // Animación de typing effect
+            typeWriter(element, text, speed = 50) {
+                let i = 0;
+                element.innerHTML = '';
+                const timer = setInterval(() => {
+                    if (i < text.length) {
+                        element.innerHTML += text.charAt(i);
+                        i++;
+                    } else {
+                        clearInterval(timer);
+                    }
+                }, speed);
+            }
+        };
+
+        // Clase principal para manejar la aplicación
+        class SocialTimelineApp {
+            constructor() {
+                this.currentPlatform = null;
+                this.chart = null;
+                this.init();
+            }
+
+            init() {
+                this.renderTimeline();
+                this.renderAnalysisCards();
+                this.setupEventListeners();
+                this.initializeChart();
+                this.loadDefaultContent();
+                utils.observeElements();
+                utils.setupSmoothScroll();
+            }
+
+            renderTimeline() {
+                const container = document.getElementById('timeline-container');
+                container.innerHTML = '';
+
+                platforms.forEach((platform, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'relative z-10 flex flex-col items-center text-center px-2 reveal';
+                    item.style.animationDelay = `${index * 0.1}s`;
+                    
+                    item.innerHTML = `
+                        <div class="timeline-item w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br ${platform.color} rounded-full flex items-center justify-center border-4 border-white/30 shadow-2xl cursor-pointer" 
+                             data-id="${platform.id}" 
+                             role="button" 
+                             tabindex="0" 
+                             aria-label="Ver información de ${platform.name}">
+                            <span class="platform-icon">${platform.icon}</span>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <div class="text-sm md:text-base font-bold text-white">${platform.name}</div>
+                            <div class="text-xs md:text-sm text-white/60">${platform.year}</div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(item);
+                });
+            }
+
+            renderAnalysisCards() {
+                const container = document.getElementById('analysis-cards-container');
+                container.innerHTML = '';
+
+                analysisTopics.forEach((topic, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'platform-card rounded-2xl p-6 md:p-8 cursor-pointer reveal group';
+                    card.style.animationDelay = `${index * 0.15}s`;
+                    card.dataset.id = topic.id;
+                    card.setAttribute('role', 'button');
+                    card.setAttribute('tabindex', '0');
+                    card.setAttribute('aria-label', `Leer más sobre ${topic.title}`);
+                    
+                    card.innerHTML = `
+                        <h4 class="font-playfair font-bold text-xl md:text-2xl mb-4 text-gray-800 group-hover:text-indigo-600 transition-colors">
+                            ${topic.title}
+                        </h4>
+                        <p class="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors">
+                            ${topic.summary}
+                        </p>
+                        <div class="mt-4 flex items-center text-indigo-500 group-hover:text-indigo-600 transition-colors">
+                            <span class="text-sm font-medium">Leer más</span>
+                            <svg class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    `;
+                    
+                    container.appendChild(card);
+                });
+            }
+
+            updateContent(platformId) {
+                const platform = platforms.find(p => p.id === platformId);
+                if (!platform || this.currentPlatform === platformId) return;
+
+                this.currentPlatform = platformId;
+                const contentDisplay = document.getElementById('content-display');
+                
+                // Animación de salida
+                contentDisplay.style.opacity = '0';
+                contentDisplay.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    contentDisplay.innerHTML = `
+                        <div class="grid lg:grid-cols-5 gap-8 items-center">
+                            <div class="lg:col-span-2 text-center flex flex-col items-center">
+                                <div class="w-32 h-32 md:w-40 md:h-40 ${platform.color} rounded-full flex items-center justify-center mb-6 shadow-2xl">
+                                    <span class="text-6xl md:text-7xl">${platform.icon}</span>
+                                </div>
+                                <h4 class="text-3xl md:text-4xl font-playfair font-bold text-gray-800 mb-2">${platform.name}</h4>
+                                <p class="text-gray-500 text-lg md:text-xl">${platform.year}</p>
+                                <div class="mt-4 px-4 py-2 bg-gray-100 rounded-full">
+                                    <span class="text-gray-600 text-sm font-medium">${platform.users}M usuarios máximo</span>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-3">
+                                <p class="text-lg md:text-xl text-gray-700 mb-8 leading-relaxed">
+                                    ${platform.summary}
+                                </p>
+                                <div class="space-y-6">
+                                    <div class="border-l-4 border-indigo-400 pl-6 py-2">
+                                        <h5 class="font-bold text-gray-800 text-lg mb-2">💡 Innovación Clave</h5>
+                                        <p class="text-gray-600">${platform.innovation}</p>
+                                    </div>
+                                    <div class="border-l-4 border-pink-400 pl-6 py-2">
+                                        <h5 class="font-bold text-gray-800 text-lg mb-2">🌟 Impacto Cultural</h5>
+                                        <p class="text-gray-600">${platform.impact}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Animación de entrada
+                    contentDisplay.style.opacity = '1';
+                    contentDisplay.style.transform = 'translateY(0)';
+                }, 300);
+
+                // Actualizar estados activos
+                document.querySelectorAll('.timeline-item').forEach(el => {
+                    el.classList.toggle('active', el.dataset.id === platformId);
+                });
+            }
+
+            setupEventListeners() {
+                // Timeline clicks
+                document.getElementById('timeline-container').addEventListener('click', (e) => {
+                    const item = e.target.closest('.timeline-item');
+                    if (item) {
+                        this.updateContent(item.dataset.id);
+                    }
+                });
+
+                // Keyboard navigation para timeline
+                document.getElementById('timeline-container').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        const item = e.target.closest('.timeline-item');
+                        if (item) {
+                            e.preventDefault();
+                            this.updateContent(item.dataset.id);
+                        }
+                    }
+                });
+
+                // Analysis cards
+                document.getElementById('analysis-cards-container').addEventListener('click', (e) => {
+                    const card = e.target.closest('[data-id]');
+                    if (card) {
+                        this.openModal(card.dataset.id);
+                    }
+                });
+
+                // Keyboard navigation para analysis cards
+                document.getElementById('analysis-cards-container').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        const card = e.target.closest('[data-id]');
+                        if (card) {
+                            e.preventDefault();
+                            this.openModal(card.dataset.id);
+                        }
+                    }
+                });
+
+                // Modal controls
+                const modal = document.getElementById('analysis-modal');
+                const closeBtn = document.getElementById('close-modal-btn');
+
+                closeBtn.addEventListener('click', () => this.closeModal());
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        this.closeModal();
+                    }
+                });
+
+                // Escape key para cerrar modal
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeModal();
+                    }
+                });
+            }
+
+            openModal(topicId) {
+                const topic = analysisTopics.find(t => t.id === topicId);
+                if (!topic) return;
+
+                const modal = document.getElementById('analysis-modal');
+                const title = document.getElementById('modal-title');
+                const body = document.getElementById('modal-body');
+
+                title.textContent = topic.title;
+                body.innerHTML = topic.content;
+                
+                modal.style.display = 'flex';
+                modal.setAttribute('aria-hidden', 'false');
+                
+                // Focus management
+                setTimeout(() => {
+                    document.getElementById('close-modal-btn').focus();
+                }, 100);
+            }
+
+            closeModal() {
+                const modal = document.getElementById('analysis-modal');
+                modal.style.display = 'none';
+                modal.setAttribute('aria-hidden', 'true');
+            }
+
+            initializeChart() {
+                const ctx = document.getElementById('userChart').getContext('2d');
+                
+                // Crear gradientes para las barras
+                const gradients = platforms.map(platform => {
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                    const colors = this.getGradientColors(platform.color);
+                    gradient.addColorStop(0, colors.start);
+                    gradient.addColorStop(1, colors.end);
+                    return gradient;
+                });
+
+                this.chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: platforms.map(p => p.name),
+                        datasets: [{
+                            label: 'Usuarios Activos Máximos (Millones)',
+                            data: platforms.map(p => p.users),
+                            backgroundColor: gradients,
+                            borderWidth: 2,
+                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                            borderRadius: 8,
+                            borderSkipped: false,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#ffffff',
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderWidth: 1,
+                                cornerRadius: 10,
+                                titleFont: { size: 16, weight: 'bold' },
+                                bodyFont: { size: 14 },
+                                padding: 15,
+                                callbacks: {
+                                    title: function(context) {
+                                        return context[0].label;
+                                    },
+                                    label: function(context) {
+                                        return `${context.parsed.y}M usuarios`;
+                                    },
+                                    afterLabel: function(context) {
+                                        const platform = platforms[context.dataIndex];
+                                        return `Año: ${platform.year}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    font: { size: 12, weight: '500' },
+                                    maxRotation: 45
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    font: { size: 12 },
+                                    callback: function(value) {
+                                        return value + 'M';
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)',
+                                    lineWidth: 1
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Usuarios (Millones)',
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    font: { size: 14, weight: '500' }
+                                }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        animation: {
+                            duration: 2000,
+                            easing: 'easeOutQuart'
+                        }
+                    }
+                });
+            }
+
+            getGradientColors(colorClass) {
+                const colorMap = {
+                    'from-gray-400 to-gray-600': { start: 'rgba(156, 163, 175, 0.8)', end: 'rgba(75, 85, 99, 0.8)' },
+                    'from-cyan-400 to-blue-500': { start: 'rgba(34, 211, 238, 0.8)', end: 'rgba(59, 130, 246, 0.8)' },
+                    'from-blue-500 to-indigo-600': { start: 'rgba(59, 130, 246, 0.8)', end: 'rgba(79, 70, 229, 0.8)' },
+                    'from-gray-700 to-black': { start: 'rgba(55, 65, 81, 0.8)', end: 'rgba(0, 0, 0, 0.8)' },
+                    'from-pink-400 to-rose-500': { start: 'rgba(244, 114, 182, 0.8)', end: 'rgba(244, 63, 94, 0.8)' },
+                    'from-green-400 to-emerald-500': { start: 'rgba(74, 222, 128, 0.8)', end: 'rgba(16, 185, 129, 0.8)' },
+                    'from-red-400 to-pink-500': { start: 'rgba(248, 113, 113, 0.8)', end: 'rgba(236, 72, 153, 0.8)' }
+                };
+                return colorMap[colorClass] || { start: 'rgba(156, 163, 175, 0.8)', end: 'rgba(75, 85, 99, 0.8)' };
+            }
+
+            loadDefaultContent() {
+                // Cargar el primer platform por defecto
+                setTimeout(() => {
+                    this.updateContent(platforms[0].id);
+                }, 500);
+            }
+        }
+
+        // Inicializar la aplicación cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            new SocialTimelineApp();
+        });
+
+        // Manejo de errores global
+        window.addEventListener('error', (e) => {
+            console.error('Error en la aplicación:', e.error);
+        });
+    </script>
+</body>
+</html>
